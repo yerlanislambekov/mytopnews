@@ -1,0 +1,36 @@
+name: Daily News Digest
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate and send digest
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python daily_digest.py
+
+      - name: Commit digest to repo
+        run: |
+          git config user.name "daily-digest-bot"
+          git config user.email "actions@github.com"
+          git add digests/
+          git diff --quiet --cached || git commit -m "Digest $(date -u +'%Y-%m-%d')"
+          git push
